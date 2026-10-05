@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum AssetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(BUYER)
+  createdAt    DateTime @default(now())
+  assets       Asset[]
+  orders       Order[]
+  payouts      Payout[]
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  category    String
+  tags        String[]
+  priceCents  Int
+  status      AssetStatus @default(PENDING)
+  previewPath String?
+  downloads   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  sellerId    String
+  seller      User        @relation(fields: [sellerId], references: [id])
+  files       AssetFile[]
+  items       OrderItem[]
+  @@index([status, category])
+}
+
+model AssetFile {
+  id           String @id @default(cuid())
+  assetId      String
+  asset        Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  format       String
+  originalName String
+  path         String
+  sizeBytes    Int
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  buyerId    String
+  buyer      User        @relation(fields: [buyerId], references: [id])
+  totalCents Int
+  createdAt  DateTime    @default(now())
+  items      OrderItem[]
+}
+
+// Commission is frozen per item at purchase time.
+model OrderItem {
+  id            String @id @default(cuid())
+  orderId       String
+  order         Order  @relation(fields: [orderId], references: [id])
+  assetId       String
+  asset         Asset  @relation(fields: [assetId], references: [id])
+  sellerId      String
+  priceCents    Int
+  commissionBps Int
+  sellerCents   Int
+  @@index([sellerId])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Payout {
+  id          String   @id @default(cuid())
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id])
+  amountCents Int
+  createdAt   DateTime @default(now())
+}

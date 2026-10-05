@@ -1,0 +1,7 @@
+node_modules
+.next
+.env
+storage/private/*
+public/uploads/*
+!storage/private/.gitkeep
+!public/uploads/.gitkeep
